@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ConstruAgg - Dashboard Funcional</title>
+    <title>ConstruAgg - Gestión Profesional</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <style>
         :root {
             --primary: #2c3e50;
@@ -31,8 +32,8 @@
         #dashboardContainer { display: none; min-height: 100vh; }
         #dashboardContainer.active { display: flex; }
         
-        /* Sidebar & Content */
-        .sidebar { width: 250px; background: var(--primary); color: white; padding: 20px 0; transition: all 0.3s; box-shadow: 2px 0 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
+        /* Sidebar */
+        .sidebar { width: 250px; background: var(--primary); color: white; padding: 20px 0; transition: all 0.3s; display: flex; flex-direction: column; position: fixed; height: 100vh; z-index: 100; }
         .logo { text-align: center; padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
         .logo h2 { font-size: 1.5rem; } .logo span { color: var(--secondary); }
         .nav-links { list-style: none; flex: 1; }
@@ -40,772 +41,599 @@
         .nav-links a:hover, .nav-links a.active { background: rgba(255,255,255,0.1); border-left: 4px solid var(--secondary); }
         .nav-links i { margin-right: 12px; width: 20px; text-align: center; }
         
-        .main-content { flex: 1; padding: 20px; overflow-y: auto; height: 100vh; }
+        /* Main Content */
+        .main-content { flex: 1; margin-left: 250px; padding: 20px; overflow-y: auto; height: 100vh; }
         
-        /* Header & Cards */
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .user-info { display: flex; align-items: center; gap: 10px; }
         .user-avatar { width: 40px; height: 40px; background: var(--secondary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+        
+        /* Cards */
         .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .card { background: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.3s; }
         .card:hover { transform: translateY(-5px); }
         .card-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; color: var(--primary); }
         .card-value { font-size: 2rem; font-weight: bold; color: var(--primary); margin-bottom: 10px; }
-        .card-change { font-size: 0.9rem; }
-        .card-change.positive { color: var(--success); } .card-change.negative { color: var(--danger); }
         
-        /* Tables & UI Elements */
+        /* Tables & UI */
         .table-container { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow-x: auto; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; padding: 15px; border-bottom: 2px solid #eee; color: var(--primary); }
+        table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        th { text-align: left; padding: 15px; border-bottom: 2px solid #eee; color: var(--primary); background: #f8f9fa; }
         td { padding: 15px; border-bottom: 1px solid #eee; }
-        tr:hover { background: #f9f9f9; }
         .status { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
-        .status.pending { background: #fff3cd; color: #856404; }
-        .status.completed { background: #d4edda; color: #155724; }
-        .status.danger { background: #f8d7da; color: #721c24; }
+        .status.pendiente { background: #fff3cd; color: #856404; }
+        .status.cancelado { background: #f8d7da; color: #721c24; }
+        .status.pagado { background: #d4edda; color: #155724; }
         
-        .btn { padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; transition: all 0.3s; }
+        .btn { padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; transition: all 0.3s; margin-right: 5px; }
         .btn-primary { background: var(--secondary); color: white; }
-        .btn-primary:hover { background: #2980b9; }
         .btn-success { background: var(--success); color: white; }
         .btn-danger { background: var(--danger); color: white; }
-        .btn-logout { background: var(--danger); color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; }
+        .btn-excel { background: #217346; color: white; } /* Color Excel */
         
-        /* Forms & Inputs */
-        .form-group { margin-bottom: 15px; text-align: left; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: var(--primary); }
-        .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1rem; }
+        /* Inputs */
+        .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 15px; }
         .alert { padding: 15px; border-radius: 8px; margin-bottom: 20px; display: none; }
-        .alert-success { background: #d4edda; color: #155724; border-left: 4px solid var(--success); }
-        .alert-danger { background: #f8d7da; color: #721c24; border-left: 4px solid var(--danger); }
-        
-        /* MODAL STYLES */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 2000; opacity: 0; transition: opacity 0.3s; }
-        .modal-overlay.active { display: flex; opacity: 1; }
-        .modal-container { background: white; width: 90%; max-width: 500px; padding: 30px; border-radius: 10px; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        .close-modal { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #777; }
-        .modal-footer { margin-top: 20px; text-align: right; }
-        
-        /* Utilities */
-        .content-section { display: none; animation: fadeIn 0.5s; }
-        .content-section.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .menu-toggle { display: none; background: none; border: none; color: var(--primary); font-size: 1.5rem; cursor: pointer; }
-        
+        .alert-success { background: #d4edda; color: #155724; }
+        .alert-danger { background: #f8d7da; color: #721c24; }
+
+        /* Modal */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 2000; }
+        .modal-overlay.active { display: flex; }
+        .modal-container { background: white; width: 90%; max-width: 500px; padding: 30px; border-radius: 10px; max-height: 90vh; overflow-y: auto; }
+
+        /* Excel Controls */
+        .excel-controls { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; background: #f1f8e9; padding: 10px; border-radius: 8px; border: 1px solid #c8e6c9; }
+
         @media (max-width: 992px) {
-            .sidebar { position: fixed; left: -250px; height: 100vh; z-index: 1000; }
+            .sidebar { left: -250px; }
             .sidebar.active { left: 0; }
+            .main-content { margin-left: 0; }
             .menu-toggle { display: block; }
         }
-        
-        /* Login Specific */
-        .login-container { text-align: center; }
-        .login-logo { font-size: 3rem; color: var(--secondary); margin-bottom: 20px; }
     </style>
 </head>
 <body>
     <div id="loadingScreen">
         <div class="spinner"></div>
         <h2>ConstruAgg</h2>
-        <p id="loadingText">Iniciando sistema...</p>
+        <p>Cargando sistema...</p>
     </div>
-    
+
     <div id="authContainer">
-        <div class="login-container">
-            <div class="login-logo"><i class="fas fa-cubes"></i></div>
-            <h2>Constru<span style="color: var(--secondary);">Agg</span></h2>
-            <p style="margin-bottom: 20px; color: #666;">Sistema de Gestión</p>
+        <div style="text-align: center;">
+            <div class="logo"><i class="fas fa-cubes" style="font-size: 3rem; color: var(--secondary);"></i></div>
+            <h2>Constru<span>Agg</span></h2>
             <div class="alert" id="authAlert"></div>
-            <div class="form-group">
-                <input type="email" class="form-control" id="loginEmail" placeholder="Correo electrónico">
-            </div>
-            <div class="form-group">
-                <input type="password" class="form-control" id="loginPassword" placeholder="Contraseña">
-            </div>
-            <button class="btn btn-primary" id="btnLogin" style="width: 100%;">Iniciar Sesión</button>
+            <input type="email" class="form-control" id="loginEmail" placeholder="Correo electrónico">
+            <input type="password" class="form-control" id="loginPassword" placeholder="Contraseña">
+            <button class="btn btn-primary" style="width: 100%;" id="btnLogin">Iniciar Sesión</button>
         </div>
     </div>
-    
+
     <div id="dashboardContainer">
         <div class="sidebar" id="sidebar">
-            <div class="logo">
-                <h2>Constru<span>Agg</span></h2>
-            </div>
+            <div class="logo"><h2>Constru<span>Agg</span></h2></div>
             <ul class="nav-links">
-                <li><a href="#" class="active" data-section="dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
-                <li><a href="#" data-section="clientes"><i class="fas fa-users"></i> Clientes</a></li>
-                <li><a href="#" data-section="stock"><i class="fas fa-boxes"></i> Stock</a></li>
-                <li><a href="#" data-section="pedidos"><i class="fas fa-clipboard-list"></i> Pedidos</a></li>
-                <li><a href="#" data-section="personal"><i class="fas fa-user-tie"></i> Personal</a></li>
-                <li><a href="#" data-section="pagos"><i class="fas fa-money-bill-wave"></i> Pagos</a></li>
+                <li><a href="#" class="active" data-section="dashboard"><i class="fas fa-chart-line"></i> Dashboard</a></li>
+                <li><a href="#" data-section="ventas"><i class="fas fa-truck-loading"></i> Ventas (Obras)</a></li>
+                <li><a href="#" data-section="stock"><i class="fas fa-boxes"></i> Almacén</a></li>
+                <li><a href="#" data-section="personal"><i class="fas fa-users"></i> Personal</a></li>
             </ul>
         </div>
-        
+
         <div class="main-content">
             <div class="header">
-                <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
-                <h1 id="pageTitle">Dashboard</h1>
+                <button class="btn btn-primary" id="menuToggle" style="display: none;"><i class="fas fa-bars"></i></button>
+                <h1 id="pageTitle">Dashboard General</h1>
                 <div class="user-info">
                     <div class="user-avatar" id="userAvatar">U</div>
-                    <span id="userEmail">Usuario</span>
-                    <button class="btn-logout" id="btnLogout">Salir</button>
+                    <button class="btn btn-danger" id="btnLogout">Salir</button>
                 </div>
             </div>
-            
-            <div class="content-section active" id="dashboard">
+
+            <div id="dashboard" class="content-section active">
                 <div class="dashboard-grid">
                     <div class="card">
-                        <div class="card-title"><h3>Ventas</h3><i class="fas fa-dollar-sign"></i></div>
-                        <div class="card-value" id="ventasHoy">$0</div>
-                        <div class="card-change positive">Ingresos totales</div>
+                        <div class="card-title"><h3>Ventas Totales</h3><i class="fas fa-coins"></i></div>
+                        <div class="card-value" id="dashTotalVentas">S/. 0.00</div>
+                        <small style="color: var(--success);">Ingresos acumulados</small>
                     </div>
                     <div class="card">
-                        <div class="card-title"><h3>Pedidos Pendientes</h3><i class="fas fa-clock"></i></div>
-                        <div class="card-value" id="pedidosEspera">0</div>
-                        <div class="card-change negative">Requieren atención</div>
+                        <div class="card-title"><h3>Total M3</h3><i class="fas fa-mountain"></i></div>
+                        <div class="card-value" id="dashTotalM3">0 m³</div>
+                        <small>Material despachado</small>
                     </div>
                     <div class="card">
-                        <div class="card-title"><h3>Stock Bajo</h3><i class="fas fa-exclamation-triangle"></i></div>
-                        <div class="card-value" id="stockBajo">0</div>
-                        <div class="card-change negative">Materiales agotándose</div>
+                        <div class="card-title"><h3>Viajes</h3><i class="fas fa-truck"></i></div>
+                        <div class="card-value" id="dashViajes">0</div>
+                        <small>Total despachos</small>
                     </div>
                 </div>
-                
-                <div class="table-container">
-                    <h3>Acciones Rápidas</h3>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top:15px;">
-                        <button class="btn btn-primary" onclick="openModal('pedido')"><i class="fas fa-plus"></i> Nuevo Pedido</button>
-                        <button class="btn btn-success" onclick="openModal('cliente')"><i class="fas fa-user-plus"></i> Nuevo Cliente</button>
-                        <button class="btn btn-primary" onclick="openModal('stock')"><i class="fas fa-boxes"></i> Agregar Material</button>
-                        <button class="btn btn-primary" onclick="openModal('pago')"><i class="fas fa-money-bill"></i> Registrar Pago</button>
-                    </div>
-                </div>
+            </div>
 
+            <div id="ventas" class="content-section" style="display:none;">
                 <div class="table-container">
-                    <h3>Últimos Pedidos</h3>
-                    <table id="recentOrdersTable">
-                        <thead><tr><th>Cliente</th><th>Material</th><th>Cantidad</th><th>Estado</th><th>Total</th></tr></thead>
-                        <tbody id="recentOrdersBody"></tbody>
-                    </table>
-                </div>
-            </div>
-            
-            <div class="content-section" id="clientes">
-                <div class="table-container">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                        <h3>Clientes</h3>
-                        <button class="btn btn-primary" onclick="openModal('cliente')"><i class="fas fa-plus"></i> Agregar</button>
+                    <h3>Registro de Ventas y Agregados</h3>
+                    
+                    <div class="excel-controls">
+                        <label class="btn btn-excel" style="cursor: pointer;">
+                            <i class="fas fa-file-import"></i> Importar Excel
+                            <input type="file" id="importVentas" accept=".xlsx" style="display: none;">
+                        </label>
+                        <button class="btn btn-excel" onclick="exportarExcelVentas()"><i class="fas fa-file-export"></i> Exportar Profesional</button>
+                        <button class="btn btn-primary" onclick="openModal('venta')"><i class="fas fa-plus"></i> Nuevo Registro</button>
                     </div>
-                    <table id="clientesTable">
-                        <thead><tr><th>Nombre</th><th>Teléfono</th><th>Dirección</th><th>Acciones</th></tr></thead>
-                        <tbody id="clientesBody"></tbody>
+
+                    <table id="tablaVentas">
+                        <thead>
+                            <tr>
+                                <th>FECHA</th>
+                                <th>OBRA / CLIENTE</th>
+                                <th>MATERIAL</th>
+                                <th>M3</th>
+                                <th>PRECIO (S/.)</th>
+                                <th>TRANSPORTE</th>
+                                <th>TOTAL (S/.)</th>
+                                <th>ESTADO</th>
+                                <th>ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bodyVentas"></tbody>
                     </table>
                 </div>
             </div>
-            
-            <div class="content-section" id="stock">
+
+            <div id="stock" class="content-section" style="display:none;">
                 <div class="table-container">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                        <h3>Inventario</h3>
+                    <h3>Control de Almacén</h3>
+                    <div class="excel-controls">
                         <button class="btn btn-primary" onclick="openModal('stock')"><i class="fas fa-plus"></i> Agregar Material</button>
                     </div>
-                    <table id="stockTable">
-                        <thead><tr><th>Material</th><th>Cantidad (m³)</th><th>Mínimo</th><th>Estado</th><th>Acciones</th></tr></thead>
-                        <tbody id="stockBody"></tbody>
-                    </table>
-                </div>
-            </div>
-            
-            <div class="content-section" id="pedidos">
-                <div class="table-container">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                        <h3>Gestión de Pedidos</h3>
-                        <button class="btn btn-primary" onclick="openModal('pedido')"><i class="fas fa-plus"></i> Nuevo Pedido</button>
-                    </div>
-                    <table id="pedidosTable">
-                        <thead><tr><th>Cliente</th><th>Material</th><th>Cantidad</th><th>Total</th><th>Estado</th><th>Fecha</th><th>Acciones</th></tr></thead>
-                        <tbody id="pedidosBody"></tbody>
+                    <table id="tablaStock">
+                        <thead><tr><th>MATERIAL</th><th>STOCK ACTUAL (M3)</th><th>ESTADO</th><th>ACCIONES</th></tr></thead>
+                        <tbody id="bodyStock"></tbody>
                     </table>
                 </div>
             </div>
 
-            <div class="content-section" id="personal">
-                <div class="table-container">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                        <h3>Personal</h3>
-                        <button class="btn btn-primary" onclick="openModal('personal')"><i class="fas fa-plus"></i> Agregar</button>
+            <div id="personal" class="content-section" style="display:none;">
+                 <div class="table-container">
+                    <h3>Gestión de Personal</h3>
+                    <div class="excel-controls">
+                         <label class="btn btn-excel" style="cursor: pointer;">
+                            <i class="fas fa-file-import"></i> Cargar desde Excel
+                            <input type="file" id="importPersonal" accept=".xlsx" style="display: none;">
+                        </label>
+                        <button class="btn btn-primary" onclick="openModal('personal')"><i class="fas fa-plus"></i> Nuevo</button>
                     </div>
-                    <table id="personalTable">
-                        <thead><tr><th>Nombre</th><th>Cargo</th><th>Teléfono</th><th>Acciones</th></tr></thead>
-                        <tbody id="personalBody"></tbody>
+                    <table id="tablaPersonal">
+                        <thead><tr><th>NOMBRE</th><th>CARGO</th><th>TELÉFONO</th><th>ACCIONES</th></tr></thead>
+                        <tbody id="bodyPersonal"></tbody>
                     </table>
                 </div>
             </div>
 
-            <div class="content-section" id="pagos">
-                <div class="table-container">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                        <h3>Pagos</h3>
-                        <button class="btn btn-primary" onclick="openModal('pago')"><i class="fas fa-plus"></i> Registrar</button>
-                    </div>
-                    <table id="pagosTable">
-                        <thead><tr><th>Concepto</th><th>Tipo</th><th>Monto</th><th>Fecha</th><th>Acciones</th></tr></thead>
-                        <tbody id="pagosBody"></tbody>
-                    </table>
-                </div>
-            </div>
         </div>
     </div>
 
     <div class="modal-overlay" id="genericModal">
         <div class="modal-container">
-            <div class="modal-header">
-                <h3 id="modalTitle">Nuevo Item</h3>
-                <button class="close-modal" onclick="closeModal()">&times;</button>
-            </div>
-            <div id="modalBody">
-                <form id="dynamicForm">
-                    </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn" style="background: #ccc;" onclick="closeModal()">Cancelar</button>
-                <button class="btn btn-primary" id="btnSaveModal">Guardar</button>
+            <h3 id="modalTitle" style="margin-bottom: 20px;">Nuevo Registro</h3>
+            <form id="dynamicForm"></form>
+            <div style="text-align: right; margin-top: 20px;">
+                <button class="btn btn-danger" onclick="closeModal()">Cancelar</button>
+                <button class="btn btn-success" id="btnSave">Guardar</button>
             </div>
         </div>
     </div>
 
     <script type="module">
-        // CONFIGURACIÓN FIREBASE
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
         const firebaseConfig = {
             apiKey: "AIzaSyDGgdMMipFBWREpTVWL2oC2LZMO6ZvBsic",
             authDomain: "frandey-7fe51.firebaseapp.com",
             projectId: "frandey-7fe51",
             storageBucket: "frandey-7fe51.firebasestorage.app",
             messagingSenderId: "992246403278",
-            appId: "1:992246403278:web:c28c8e6bfc67c53d7b009f",
-            measurementId: "G-FBNJSGP1RQ"
+            appId: "1:992246403278:web:c28c8e6bfc67c53d7b009f"
         };
 
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, where, Timestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        // INIT FIREBASE
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // STATE
-        let currentUser = null;
+        // Variables Globales
         let currentModalType = '';
         let currentEditId = null;
 
-        // ELEMENTOS DOM
-        const loadingScreen = document.getElementById('loadingScreen');
-        const authContainer = document.getElementById('authContainer');
-        const dashboardContainer = document.getElementById('dashboardContainer');
-        const genericModal = document.getElementById('genericModal');
-        const dynamicForm = document.getElementById('dynamicForm');
-        const modalTitle = document.getElementById('modalTitle');
-
-        // --- AUTENTICACIÓN ---
+        // --- AUTH ---
         onAuthStateChanged(auth, (user) => {
+            document.getElementById('loadingScreen').classList.add('hide');
             if (user) {
-                currentUser = user;
-                document.getElementById('userEmail').textContent = user.email;
-                document.getElementById('userAvatar').textContent = user.email.charAt(0).toUpperCase();
-                showDashboard();
+                document.getElementById('authContainer').classList.remove('active');
+                document.getElementById('dashboardContainer').classList.add('active');
+                document.getElementById('userAvatar').innerText = user.email.charAt(0).toUpperCase();
+                loadAllData();
             } else {
-                currentUser = null;
-                showLogin();
+                document.getElementById('authContainer').classList.add('active');
+                document.getElementById('dashboardContainer').classList.remove('active');
             }
-            loadingScreen.classList.add('hide');
         });
 
-        document.getElementById('btnLogin').addEventListener('click', async () => {
-            const email = document.getElementById('loginEmail').value;
-            const pass = document.getElementById('loginPassword').value;
-            const btn = document.getElementById('btnLogin');
-            
-            if(!email || !pass) return showAlert('Completa todos los campos', 'danger');
-            
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
+        document.getElementById('btnLogin').onclick = async () => {
             try {
-                await signInWithEmailAndPassword(auth, email, pass);
-            } catch (error) {
-                if(error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-                    try {
-                        await createUserWithEmailAndPassword(auth, email, pass);
-                    } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
-                } else {
-                    showAlert('Error: ' + error.message, 'danger');
-                }
+                await signInWithEmailAndPassword(auth, 
+                    document.getElementById('loginEmail').value, 
+                    document.getElementById('loginPassword').value
+                );
+            } catch (e) {
+                alert("Error: " + e.message);
             }
-            btn.innerHTML = 'Iniciar Sesión';
-        });
-
-        document.getElementById('btnLogout').addEventListener('click', () => signOut(auth));
-
-        function showLogin() {
-            authContainer.classList.add('active');
-            dashboardContainer.classList.remove('active');
-        }
-
-        function showDashboard() {
-            authContainer.classList.remove('active');
-            dashboardContainer.classList.add('active');
-            loadDashboardStats();
-            loadRecentOrders(); 
-        }
-
-        function showAlert(msg, type) {
-            const alert = document.getElementById('authAlert');
-            alert.textContent = msg;
-            alert.className = `alert alert-${type}`;
-            alert.style.display = 'block';
-            setTimeout(() => alert.style.display = 'none', 3000);
-        }
+        };
+        document.getElementById('btnLogout').onclick = () => signOut(auth);
 
         // --- NAVEGACIÓN ---
         document.querySelectorAll('.nav-links a').forEach(link => {
-            link.addEventListener('click', (e) => {
+            link.onclick = (e) => {
                 e.preventDefault();
                 document.querySelectorAll('.nav-links a').forEach(l => l.classList.remove('active'));
                 link.classList.add('active');
-                
-                const sectionId = link.getAttribute('data-section');
-                document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
-                document.getElementById(sectionId).classList.add('active');
-                
-                document.getElementById('pageTitle').textContent = link.textContent.trim();
-                
-                if(sectionId === 'clientes') loadClientes();
-                if(sectionId === 'stock') loadStock();
-                if(sectionId === 'pedidos') loadPedidos();
-                if(sectionId === 'personal') loadPersonal();
-                if(sectionId === 'pagos') loadPagos();
-                if(sectionId === 'dashboard') { loadDashboardStats(); loadRecentOrders(); }
-                
-                if(window.innerWidth <= 992) document.getElementById('sidebar').classList.remove('active');
-            });
+                document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
+                document.getElementById(link.dataset.section).style.display = 'block';
+                document.getElementById('pageTitle').innerText = link.innerText;
+            };
         });
 
-        document.getElementById('menuToggle').addEventListener('click', () => {
-            document.getElementById('sidebar').classList.toggle('active');
-        });
+        // --- CARGAR DATOS ---
+        async function loadAllData() {
+            loadVentas();
+            loadStock();
+            loadPersonal();
+        }
 
-        // --- SISTEMA DE MODAL GENÉRICO ---
-        window.openModal = async (type, id = null) => {
-            currentModalType = type;
-            currentEditId = id;
-            dynamicForm.innerHTML = '<div style="text-align:center"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
-            genericModal.classList.add('active');
+        // 1. CARGAR VENTAS (Con corrección de números)
+        async function loadVentas() {
+            const body = document.getElementById('bodyVentas');
+            body.innerHTML = '<tr><td colspan="9" style="text-align:center">Cargando datos...</td></tr>';
             
-            let titleText = '';
-            switch(type) {
-                case 'cliente': titleText = id ? 'Editar Cliente' : 'Nuevo Cliente'; break;
-                case 'stock': titleText = id ? 'Editar Material' : 'Nuevo Material'; break;
-                case 'pedido': titleText = id ? 'Editar Pedido' : 'Nuevo Pedido'; break;
-                case 'personal': titleText = id ? 'Editar Personal' : 'Nuevo Personal'; break;
-                case 'pago': titleText = id ? 'Editar Pago' : 'Nuevo Pago'; break;
-                default: titleText = 'Nuevo Item';
-            }
-            modalTitle.textContent = titleText;
-
-            let html = '';
-            let data = {};
-
-            if (id) {
-                const collectionName = getCollectionName(type);
-                const docRef = doc(db, collectionName, id);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) data = docSnap.data();
-            }
-
-            // IMPORTANTE: Aquí aseguramos que el formulario use "Nombre" con mayúscula para compatibilidad
-            if (type === 'cliente') {
-                html = `
-                    <div class="form-group"><label>Nombre</label><input type="text" class="form-control" name="Nombre" value="${data.Nombre || data.nombre || ''}" required></div>
-                    <div class="form-group"><label>Teléfono</label><input type="tel" class="form-control" name="Telefono" value="${data.Telefono || data.telefono || ''}"></div>
-                    <div class="form-group"><label>Dirección</label><input type="text" class="form-control" name="Direccion" value="${data.Direccion || data.direccion || ''}"></div>
-                `;
-            } else if (type === 'stock') {
-                html = `
-                    <div class="form-group"><label>Material</label><input type="text" class="form-control" name="Nombre" value="${data.Nombre || data.nombre || ''}" required></div>
-                    <div class="form-group"><label>Cantidad</label><input type="text" class="form-control" name="Cantidad" value="${data.Cantidad || data.cantidad || ''}" placeholder="Ej: 100 toneladas"></div>
-                    <div class="form-group"><label>Stock Mínimo</label><input type="text" class="form-control" name="StockMinimo" value="${data.StockMinimo || data.stockMinimo || ''}" placeholder="Ej: 20 toneladas"></div>
-                `;
-            } else if (type === 'personal') {
-                html = `
-                    <div class="form-group"><label>Nombre</label><input type="text" class="form-control" name="Nombre" value="${data.Nombre || data.nombre || ''}" required></div>
-                    <div class="form-group"><label>Cargo</label><input type="text" class="form-control" name="Cargo" value="${data.Cargo || data.cargo || ''}" placeholder="Ej: Operador"></div>
-                    <div class="form-group"><label>Teléfono</label><input type="tel" class="form-control" name="Telefono" value="${data.Telefono || data.telefono || ''}"></div>
-                `;
-            } else if (type === 'pago') {
-                html = `
-                    <div class="form-group"><label>Concepto</label><input type="text" class="form-control" name="Nota" value="${data.Nota || data.nota || ''}" required placeholder="Ej: Pago de salario"></div>
-                    <div class="form-group"><label>Tipo</label>
-                        <select class="form-control" name="Tipo">
-                            <option value="Ingreso" ${data.Tipo === 'Ingreso' ? 'selected' : ''}>Ingreso</option>
-                            <option value="Egreso" ${data.Tipo === 'Egreso' ? 'selected' : ''}>Egreso</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label>Monto</label><input type="number" class="form-control" name="Monto" value="${data.Monto || data.monto || 0}" step="0.01"></div>
-                `;
-            } else if (type === 'pedido') {
-                const clientesSnap = await getDocs(collection(db, 'Clientes'));
-                const stockSnap = await getDocs(collection(db, 'Stock'));
+            try {
+                const q = query(collection(db, "Ventas"), orderBy("fecha", "desc")); // Ordenar por fecha
+                const snap = await getDocs(q);
                 
-                let clientesOpts = '<option value="">Seleccionar Cliente</option>';
-                clientesSnap.forEach(doc => {
-                    const c = doc.data();
-                    const n = c.Nombre || c.nombre || 'Sin nombre';
-                    clientesOpts += `<option value="${n}" ${data.ClienteNombre === n ? 'selected' : ''}>${n}</option>`;
+                let totalSoles = 0;
+                let totalM3 = 0;
+                let totalViajes = 0;
+                
+                body.innerHTML = '';
+                
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    
+                    // Asegurar números para estadísticas
+                    const precioTotal = parseFloat(d.total) || 0;
+                    const m3 = parseFloat(d.m3) || 0;
+                    
+                    totalSoles += precioTotal;
+                    totalM3 += m3;
+                    totalViajes++;
+
+                    // Formatear Fecha (Soporta objetos Date de Excel o Strings)
+                    let fechaStr = d.fecha;
+                    if(d.fecha && d.fecha.seconds) { // Si es timestamp de Firestore
+                        fechaStr = new Date(d.fecha.seconds * 1000).toLocaleDateString();
+                    }
+
+                    body.innerHTML += `
+                        <tr>
+                            <td>${fechaStr || '-'}</td>
+                            <td>${d.obra || '-'}</td>
+                            <td>${d.material || '-'}</td>
+                            <td>${m3}</td>
+                            <td>S/. ${d.precio || 0}</td>
+                            <td>S/. ${d.transporte || 0}</td>
+                            <td><strong>S/. ${precioTotal.toFixed(2)}</strong></td>
+                            <td><span class="status ${d.estado ? d.estado.toLowerCase() : ''}">${d.estado || 'Pendiente'}</span></td>
+                            <td>
+                                <button class="btn btn-danger" onclick="deleteItem('Ventas', '${doc.id}')"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
                 });
 
-                let stockOpts = '<option value="">Seleccionar Material</option>';
-                stockSnap.forEach(doc => {
-                    const s = doc.data();
-                    const n = s.Nombre || s.nombre || 'Sin nombre';
-                    stockOpts += `<option value="${n}" ${data.Material === n ? 'selected' : ''}>${n} (Disp: ${s.Cantidad || s.cantidad || '?'})</option>`;
-                });
+                // ACTUALIZAR DASHBOARD (Corrección del bug de "Cargando...")
+                document.getElementById('dashTotalVentas').innerText = `S/. ${totalSoles.toFixed(2)}`;
+                document.getElementById('dashTotalM3').innerText = `${totalM3.toFixed(2)} m³`;
+                document.getElementById('dashViajes').innerText = totalViajes;
 
-                html = `
-                    <div class="form-group"><label>Cliente</label>
-                        <select class="form-control" name="ClienteNombre" required>${clientesOpts}</select>
-                    </div>
-                    <div class="form-group"><label>Material</label>
-                        <select class="form-control" name="Material" required>${stockOpts}</select>
-                    </div>
-                    <div class="form-group"><label>Cantidad</label><input type="text" class="form-control" name="Cantidad" value="${data.Cantidad || ''}" placeholder="Ej: 15 toneladas" required></div>
-                    <div class="form-group"><label>Precio Total</label><input type="number" class="form-control" name="Precio" value="${data.Precio || 0}" required></div>
-                    <div class="form-group"><label>Estado</label>
-                        <select class="form-control" name="Estado">
-                            <option value="En espera" ${data.Estado === 'En espera' ? 'selected' : ''}>En espera</option>
-                            <option value="Entregado" ${data.Estado === 'Entregado' ? 'selected' : ''}>Entregado</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label>Notas (Opcional)</label><input type="text" class="form-control" name="Notas" value="${data.Notas || ''}"></div>
-                `;
+            } catch (e) {
+                console.error(e);
+                body.innerHTML = '<tr><td colspan="9">Error al cargar datos.</td></tr>';
             }
-
-            dynamicForm.innerHTML = html;
-        };
-
-        window.closeModal = () => {
-            genericModal.classList.remove('active');
-            dynamicForm.reset();
-        };
-
-        // --- FUNCIONES AUXILIARES ---
-        function getCollectionName(type) {
-            switch(type) {
-                case 'cliente': return 'Clientes';
-                case 'stock': return 'Stock';
-                case 'pedido': return 'Pedidos';
-                case 'personal': return 'Personal';
-                case 'pago': return 'Pagos';
-                default: return type;
-            }
-        }
-
-        // --- GUARDAR DATOS ---
-        document.getElementById('btnSaveModal').addEventListener('click', async () => {
-            const btn = document.getElementById('btnSaveModal');
-            const originalText = btn.textContent;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            btn.disabled = true;
-
-            try {
-                const formData = new FormData(dynamicForm);
-                const data = {};
-                formData.forEach((value, key) => {
-                    data[key] = value;
-                });
-                
-                if (data.Nombre && data.Nombre.trim() === '') throw new Error('El nombre no puede estar vacío');
-                
-                if (!currentEditId) data.Fecha = Timestamp.now();
-
-                const collectionName = getCollectionName(currentModalType);
-
-                if (currentEditId) {
-                    await updateDoc(doc(db, collectionName, currentEditId), data);
-                } else {
-                    await addDoc(collection(db, collectionName), data);
-                }
-
-                closeModal();
-                reloadCurrentSection();
-                showAlert('Datos guardados correctamente', 'success');
-
-            } catch (error) {
-                console.error('Error al guardar:', error);
-                alert("Error al guardar: " + error.message);
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
-        });
-
-        function reloadCurrentSection() {
-            const activeSection = document.querySelector('.content-section.active').id;
-            switch(activeSection) {
-                case 'dashboard': loadDashboardStats(); loadRecentOrders(); break;
-                case 'clientes': loadClientes(); break;
-                case 'stock': loadStock(); break;
-                case 'pedidos': loadPedidos(); break;
-                case 'personal': loadPersonal(); break;
-                case 'pagos': loadPagos(); break;
-            }
-        }
-
-        window.deleteItem = async (type, id) => {
-            if(!confirm('¿Estás seguro de eliminar este registro?')) return;
-            try {
-                const collectionName = getCollectionName(type);
-                await deleteDoc(doc(db, collectionName, id));
-                reloadCurrentSection();
-                showAlert('Registro eliminado correctamente', 'success');
-            } catch(error) {
-                alert('Error al eliminar: ' + error.message);
-            }
-        };
-
-        // --- CARGADORES DE DATOS (AQUÍ ESTÁ LA CORRECCIÓN PRINCIPAL) ---
-
-        async function loadClientes() {
-            const list = document.getElementById('clientesBody');
-            list.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>';
-            try {
-                const q = query(collection(db, 'Clientes'), orderBy('Nombre'));
-                const querySnapshot = await getDocs(q);
-                list.innerHTML = '';
-                if(querySnapshot.empty) {
-                    list.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px; color: #666;">No hay clientes registrados</td></tr>';
-                } else {
-                    querySnapshot.forEach(doc => {
-                        const d = doc.data();
-                        // Corrección: Soporta mayúsculas y minúsculas
-                        const nombre = d.Nombre || d.nombre || 'Sin nombre';
-                        const tel = d.Telefono || d.telefono || '-';
-                        const dir = d.Direccion || d.direccion || '-';
-
-                        list.innerHTML += `
-                            <tr>
-                                <td>${nombre}</td>
-                                <td>${tel}</td>
-                                <td>${dir}</td>
-                                <td>
-                                    <button class="btn btn-primary" onclick="openModal('cliente', '${doc.id}')"><i class="fas fa-edit"></i></button>
-                                    <button class="btn btn-danger" onclick="deleteItem('cliente', '${doc.id}')"><i class="fas fa-trash"></i></button>
-                                </td>
-                            </tr>`;
-                    });
-                }
-            } catch (error) { list.innerHTML = '<tr><td colspan="4">Error al cargar datos</td></tr>'; }
         }
 
         async function loadStock() {
-            const list = document.getElementById('stockBody');
-            list.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>';
-            try {
-                const querySnapshot = await getDocs(collection(db, 'Stock'));
-                list.innerHTML = '';
-                if(querySnapshot.empty) {
-                    list.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #666;">No hay materiales</td></tr>';
-                } else {
-                    querySnapshot.forEach(doc => {
-                        const d = doc.data();
-                        // Corrección: Soporta mayúsculas y minúsculas
-                        const nombre = d.Nombre || d.nombre || 'Sin nombre';
-                        const cantidad = d.Cantidad || d.cantidad || '0';
-                        const minimo = d.StockMinimo || d.stockMinimo || '0';
-                        
-                        let status = 'completed';
-                        let statusText = 'Normal';
-                        
-                        if(parseFloat(cantidad) <= parseFloat(minimo)) {
-                            status = 'pending';
-                            statusText = 'Bajo';
-                        }
-                        
-                        list.innerHTML += `
-                            <tr>
-                                <td>${nombre}</td>
-                                <td>${cantidad}</td>
-                                <td>${minimo}</td>
-                                <td><span class="status ${status}">${statusText}</span></td>
-                                <td>
-                                    <button class="btn btn-primary" onclick="openModal('stock', '${doc.id}')"><i class="fas fa-edit"></i></button>
-                                    <button class="btn btn-danger" onclick="deleteItem('stock', '${doc.id}')"><i class="fas fa-trash"></i></button>
-                                </td>
-                            </tr>`;
-                    });
-                }
-            } catch (error) { list.innerHTML = '<tr><td colspan="5">Error al cargar datos</td></tr>'; }
-        }
-
-        async function loadPedidos() {
-            const list = document.getElementById('pedidosBody');
-            list.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>';
-            try {
-                let q;
-                try { q = query(collection(db, 'Pedidos'), orderBy('Fecha', 'desc')); } 
-                catch(e) { q = collection(db, 'Pedidos'); }
+            const body = document.getElementById('bodyStock');
+            const snap = await getDocs(collection(db, "Stock"));
+            body.innerHTML = '';
+            snap.forEach(doc => {
+                const d = doc.data();
+                const stock = parseFloat(d.stock) || 0;
+                const status = stock > 10 ? 'Normal' : 'Bajo';
+                const color = stock > 10 ? 'pagado' : 'cancelado';
                 
-                const querySnapshot = await getDocs(q);
-                list.innerHTML = '';
-                if(querySnapshot.empty) {
-                    list.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #666;">No hay pedidos</td></tr>';
-                } else {
-                    querySnapshot.forEach(doc => {
-                        const d = doc.data();
-                        const date = d.Fecha ? new Date(d.Fecha.seconds * 1000).toLocaleDateString() : '-';
-                        const statusClass = d.Estado === 'Entregado' ? 'completed' : 'pending';
-                        
-                        list.innerHTML += `
-                            <tr>
-                                <td>${d.ClienteNombre || 'Sin cliente'}</td>
-                                <td>${d.Material || 'N/A'}</td>
-                                <td>${d.Cantidad || 'N/A'}</td>
-                                <td>$${d.Precio || '0'}</td>
-                                <td><span class="status ${statusClass}">${d.Estado || 'En espera'}</span></td>
-                                <td>${date}</td>
-                                <td>
-                                    <button class="btn btn-primary" onclick="openModal('pedido', '${doc.id}')"><i class="fas fa-edit"></i></button>
-                                    <button class="btn btn-danger" onclick="deleteItem('pedido', '${doc.id}')"><i class="fas fa-trash"></i></button>
-                                </td>
-                            </tr>`;
-                    });
-                }
-            } catch (error) { list.innerHTML = `<tr><td colspan="7">Error al cargar datos</td></tr>`; }
+                body.innerHTML += `
+                    <tr>
+                        <td>${d.material}</td>
+                        <td>${stock}</td>
+                        <td><span class="status ${color}">${status}</span></td>
+                        <td>
+                             <button class="btn btn-danger" onclick="deleteItem('Stock', '${doc.id}')"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
         }
 
-        // --- ¡AQUÍ ESTÁ LA CORRECCIÓN DE PERSONAL! ---
         async function loadPersonal() {
-            const list = document.getElementById('personalBody');
-            list.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>';
-            try {
-                const snapshot = await getDocs(collection(db, 'Personal'));
-                list.innerHTML = '';
-                if(snapshot.empty) {
-                    list.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px; color: #666;">No hay personal registrado</td></tr>';
-                } else {
-                    snapshot.forEach(doc => {
-                        const d = doc.data();
-                        
-                        // --- ESTA PARTE ARREGLA TU PROBLEMA ---
-                        // Busca "Nombre" (Mayúscula) O "nombre" (minúscula)
-                        const nombreFinal = d.Nombre || d.nombre || 'Sin nombre';
-                        const cargoFinal = d.Cargo || d.cargo || '-';
-                        const telFinal = d.Telefono || d.telefono || d.Teléfono || '-';
-                        
-                        list.innerHTML += `
-                            <tr>
-                                <td>${nombreFinal}</td>
-                                <td>${cargoFinal}</td>
-                                <td>${telFinal}</td>
-                                <td>
-                                    <button class="btn btn-primary" onclick="openModal('personal', '${doc.id}')"><i class="fas fa-edit"></i></button>
-                                    <button class="btn btn-danger" onclick="deleteItem('personal', '${doc.id}')"><i class="fas fa-trash"></i></button>
-                                </td>
-                            </tr>`;
-                    });
-                }
-            } catch(error) {
-                console.error('Error cargando personal:', error);
-                list.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px; color: #e74c3c;">Error al cargar datos</td></tr>';
-            }
+            const body = document.getElementById('bodyPersonal');
+            const snap = await getDocs(collection(db, "Personal"));
+            body.innerHTML = '';
+            snap.forEach(doc => {
+                const d = doc.data();
+                body.innerHTML += `
+                    <tr>
+                        <td>${d.nombre || ''}</td>
+                        <td>${d.cargo || ''}</td>
+                        <td>${d.telefono || ''}</td>
+                        <td>
+                            <button class="btn btn-danger" onclick="deleteItem('Personal', '${doc.id}')"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
         }
 
-        async function loadPagos() {
-            const list = document.getElementById('pagosBody');
-            list.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>';
-            try {
-                const snapshot = await getDocs(collection(db, 'Pagos'));
-                list.innerHTML = '';
-                if(snapshot.empty) {
-                    list.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #666;">No hay pagos</td></tr>';
-                } else {
-                    snapshot.forEach(doc => {
-                        const d = doc.data();
-                        const date = d.FechaVencimiento ? new Date(d.FechaVencimiento.seconds * 1000).toLocaleDateString() : '-';
-                        const tipo = d.Tipo || 'Ingreso';
-                        const color = tipo === 'Ingreso' ? 'var(--success)' : 'var(--danger)';
-                        
-                        list.innerHTML += `
-                            <tr>
-                                <td>${d.Nota || d.nota || 'Sin concepto'}</td>
-                                <td style="color: ${color}; font-weight: bold;">${tipo}</td>
-                                <td>$${d.Monto || d.monto || '0'}</td>
-                                <td>${date}</td>
-                                <td>
-                                    <button class="btn btn-danger" onclick="deleteItem('pago', '${doc.id}')"><i class="fas fa-trash"></i></button>
-                                </td>
-                            </tr>`;
-                    });
-                }
-            } catch(error) { list.innerHTML = '<tr><td colspan="5">Error al cargar datos</td></tr>'; }
-        }
+        // --- IMPORTACIÓN INTELIGENTE EXCEL (ExcelJS) ---
+        // Detecta duplicados y usa tu estructura exacta
+        document.getElementById('importVentas').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
 
-        async function loadDashboardStats() {
-            try {
-                const pedidosSnap = await getDocs(collection(db, 'Pedidos'));
-                let totalVentas = 0;
-                let pending = 0;
-                pedidosSnap.forEach(doc => {
+            const workbook = new ExcelJS.Workbook();
+            const reader = new FileReader();
+
+            reader.onload = async (e) => {
+                const buffer = e.target.result;
+                await workbook.xlsx.load(buffer);
+                const worksheet = workbook.getWorksheet(1); // Primera hoja
+
+                // 1. Obtener datos existentes para evitar duplicados
+                const snapshot = await getDocs(collection(db, "Ventas"));
+                const existentes = [];
+                snapshot.forEach(doc => {
                     const d = doc.data();
-                    if(d.Estado === 'Entregado') totalVentas += Number(d.Precio) || 0;
-                    if(d.Estado === 'En espera') pending++;
+                    // Crear una "clave única" basada en datos: Fecha-Obra-Total
+                    existentes.push(`${d.fecha}-${d.obra}-${d.total}`.toLowerCase().trim());
                 });
-                document.getElementById('ventasHoy').textContent = `$${totalVentas.toFixed(2)}`;
-                document.getElementById('pedidosEspera').textContent = pending;
 
-                const stockSnap = await getDocs(collection(db, 'Stock'));
-                let low = 0;
-                stockSnap.forEach(doc => {
-                    const d = doc.data();
-                    if(parseFloat(d.Cantidad || d.cantidad) <= parseFloat(d.StockMinimo || d.stockMinimo)) low++;
+                let nuevos = 0;
+                let duplicados = 0;
+
+                // 2. Recorrer Excel (Asumiendo fila 1 es encabezado, datos empiezan en fila 2)
+                // Estructura: FECHA | OBRA | MATERIAL | M3 | PRECIO | TRANSPORTE | TOTAL | ESTADO
+                worksheet.eachRow((row, rowNumber) => {
+                    if (rowNumber > 1) { // Saltar encabezado
+                        const rawDate = row.getCell(1).value; 
+                        let fechaVal = rawDate;
+                        
+                        // Manejo de fechas de Excel
+                        if(typeof rawDate === 'object') fechaVal = rawDate.toLocaleDateString();
+
+                        const rowData = {
+                            fecha: fechaVal,
+                            obra: row.getCell(2).text,
+                            material: row.getCell(3).text,
+                            m3: row.getCell(4).value,
+                            precio: row.getCell(5).value,
+                            transporte: row.getCell(6).value,
+                            total: row.getCell(7).value,
+                            estado: row.getCell(8).text || 'Pendiente'
+                        };
+
+                        // Verificar validez (que tenga al menos obra y total)
+                        if (rowData.obra && rowData.total) {
+                            const clave = `${rowData.fecha}-${rowData.obra}-${rowData.total}`.toLowerCase().trim();
+                            
+                            if (!existentes.includes(clave)) {
+                                addDoc(collection(db, "Ventas"), rowData);
+                                nuevos++;
+                            } else {
+                                duplicados++;
+                            }
+                        }
+                    }
                 });
-                document.getElementById('stockBajo').textContent = low;
-            } catch (error) {}
-        }
 
-        async function loadRecentOrders() {
-            const list = document.getElementById('recentOrdersBody');
-            if(!list) return;
-            try {
-                let querySnapshot;
-                try {
-                    const q = query(collection(db, 'Pedidos'), orderBy('Fecha', 'desc'));
-                    querySnapshot = await getDocs(q);
-                } catch(e) { querySnapshot = await getDocs(collection(db, 'Pedidos')); }
+                alert(`Proceso terminado.\nNuevos agregados: ${nuevos}\nDuplicados ignorados: ${duplicados}`);
+                loadVentas(); // Recargar tabla
+            };
+            reader.readAsArrayBuffer(file);
+        });
+        
+        // Importar Personal (Lógica similar simple)
+        document.getElementById('importPersonal').addEventListener('change', async (e) => {
+             const file = e.target.files[0];
+             if(!file) return;
+             
+             const workbook = new ExcelJS.Workbook();
+             const reader = new FileReader();
+             
+             reader.onload = async (e) => {
+                 await workbook.xlsx.load(e.target.result);
+                 const ws = workbook.getWorksheet(1);
+                 
+                 // Buscar si existe columna "Nombre" o "Empleado"
+                 // Implementación simple para Personal
+                 ws.eachRow((row, rowNum) => {
+                     if(rowNum > 1) {
+                         const n = row.getCell(1).text; // Asume col 1 es nombre
+                         if(n) {
+                             addDoc(collection(db, "Personal"), {
+                                 nombre: n,
+                                 cargo: row.getCell(2).text,
+                                 telefono: row.getCell(3).text
+                             });
+                         }
+                     }
+                 });
+                 alert("Personal importado.");
+                 loadPersonal();
+             };
+             reader.readAsArrayBuffer(file);
+        });
+
+
+        // --- EXPORTACIÓN PROFESIONAL EXCEL ---
+        window.exportarExcelVentas = async () => {
+            const workbook = new ExcelJS.Workbook();
+            const sheet = workbook.addWorksheet('AGREGADOS VENTAS');
+
+            // 1. Definir columnas y anchos (Estilo Profesional)
+            sheet.columns = [
+                { header: 'FECHA', key: 'fecha', width: 15 },
+                { header: 'OBRA', key: 'obra', width: 30 },
+                { header: 'MATERIAL', key: 'material', width: 20 },
+                { header: 'M3', key: 'm3', width: 10 },
+                { header: 'PRECIO', key: 'precio', width: 12 },
+                { header: 'TRANSPORTE', key: 'transporte', width: 15 },
+                { header: 'TOTAL', key: 'total', width: 15 },
+                { header: 'ESTADO', key: 'estado', width: 15 }
+            ];
+
+            // 2. Estilo del Encabezado (Azul oscuro, texto blanco, negrita)
+            const headerRow = sheet.getRow(1);
+            headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            headerRow.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FF2C3E50' } // Tu color primary
+            };
+            headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+
+            // 3. Agregar Datos de Firebase
+            const snap = await getDocs(collection(db, "Ventas"));
+            snap.forEach(doc => {
+                const d = doc.data();
+                const row = sheet.addRow(d);
                 
-                list.innerHTML = '';
-                let count = 0;
-                if(querySnapshot.empty) {
-                    list.innerHTML = '<tr><td colspan="5" style="text-align: center;">No hay pedidos recientes</td></tr>';
-                } else {
-                    querySnapshot.forEach(doc => {
-                        if(count >= 5) return;
-                        const d = doc.data();
-                        const status = d.Estado === 'Entregado' ? 'completed' : 'pending';
-                        list.innerHTML += `
-                            <tr>
-                                <td>${d.ClienteNombre || 'Sin cliente'}</td>
-                                <td>${d.Material || 'N/A'}</td>
-                                <td>${d.Cantidad || 'N/A'}</td>
-                                <td><span class="status ${status}">${d.Estado || 'En espera'}</span></td>
-                                <td>$${d.Precio || '0'}</td>
-                            </tr>`;
-                        count++;
+                // Formato de moneda para columnas de dinero
+                row.getCell('precio').numFmt = '"S/."#,##0.00';
+                row.getCell('transporte').numFmt = '"S/."#,##0.00';
+                row.getCell('total').numFmt = '"S/."#,##0.00';
+                
+                // Centrar celdas
+                row.eachCell((cell) => {
+                    cell.alignment = { vertical: 'middle', horizontal: 'left' };
+                    cell.border = {
+                        top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'}
+                    };
+                });
+            });
+
+            // 4. Descargar
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'Reporte_Ventas_Profesional.xlsx';
+            link.click();
+        };
+
+        // --- SISTEMA DE MODALES Y CRUD ---
+        window.openModal = (type, id=null) => {
+            document.getElementById('genericModal').classList.add('active');
+            currentModalType = type;
+            const form = document.getElementById('dynamicForm');
+            form.innerHTML = '';
+
+            if(type === 'venta') {
+                form.innerHTML = `
+                    <input type="date" class="form-control" id="mFecha" required>
+                    <input type="text" class="form-control" id="mObra" placeholder="Nombre de Obra / Cliente" required>
+                    <input type="text" class="form-control" id="mMaterial" placeholder="Material (Arena, Piedra...)">
+                    <input type="number" class="form-control" id="mM3" placeholder="Cantidad M3" step="0.01">
+                    <input type="number" class="form-control" id="mPrecio" placeholder="Precio Material (S/.)" step="0.01">
+                    <input type="number" class="form-control" id="mTrans" placeholder="Costo Transporte (S/.)" step="0.01">
+                    <select class="form-control" id="mEstado">
+                        <option value="Pendiente">Pendiente</option>
+                        <option value="Pagado">Pagado</option>
+                    </select>
+                `;
+            } else if(type === 'stock') {
+                 form.innerHTML = `
+                    <input type="text" class="form-control" id="sMat" placeholder="Nombre Material" required>
+                    <input type="number" class="form-control" id="sStock" placeholder="Stock Actual (M3)">
+                `;
+            } else if(type === 'personal') {
+                 form.innerHTML = `
+                    <input type="text" class="form-control" id="pNom" placeholder="Nombre Completo" required>
+                    <input type="text" class="form-control" id="pCargo" placeholder="Cargo">
+                    <input type="text" class="form-control" id="pTel" placeholder="Teléfono">
+                `;
+            }
+        };
+
+        window.closeModal = () => document.getElementById('genericModal').classList.remove('active');
+
+        document.getElementById('btnSave').onclick = async () => {
+            const type = currentModalType;
+            try {
+                if(type === 'venta') {
+                    const m3 = parseFloat(document.getElementById('mM3').value) || 0;
+                    const pre = parseFloat(document.getElementById('mPrecio').value) || 0;
+                    const tra = parseFloat(document.getElementById('mTrans').value) || 0;
+                    
+                    await addDoc(collection(db, "Ventas"), {
+                        fecha: document.getElementById('mFecha').value,
+                        obra: document.getElementById('mObra').value,
+                        material: document.getElementById('mMaterial').value,
+                        m3: m3,
+                        precio: pre,
+                        transporte: tra,
+                        total: (m3 * pre) + tra, // Cálculo automático
+                        estado: document.getElementById('mEstado').value
+                    });
+                } else if(type === 'stock') {
+                     await addDoc(collection(db, "Stock"), {
+                        material: document.getElementById('sMat').value,
+                        stock: parseFloat(document.getElementById('sStock').value)
+                    });
+                } else if(type === 'personal') {
+                     await addDoc(collection(db, "Personal"), {
+                        nombre: document.getElementById('pNom').value,
+                        cargo: document.getElementById('pCargo').value,
+                        telefono: document.getElementById('pTel').value
                     });
                 }
-            } catch (error) {}
-        }
+                closeModal();
+                loadAllData();
+                alert("Guardado correctamente");
+            } catch(e) {
+                alert("Error: " + e.message);
+            }
+        };
+
+        window.deleteItem = async (coll, id) => {
+            if(confirm("¿Eliminar registro?")) {
+                await deleteDoc(doc(db, coll, id));
+                loadAllData();
+            }
+        };
+
     </script>
 </body>
 </html>
